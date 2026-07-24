@@ -1,0 +1,43 @@
+name: Build unsigned IPA
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout project
+        uses: actions/checkout@v4
+
+      - name: Build iPhone app without signing
+        run: |
+          set -euo pipefail
+          xcodebuild \
+            -project TivanONTBootstrapper.xcodeproj \
+            -scheme TivanONTBootstrapper \
+            -configuration Release \
+            -sdk iphoneos \
+            -derivedDataPath build \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY="" \
+            clean build
+
+      - name: Package unsigned IPA
+        run: |
+          set -euo pipefail
+          APP_PATH="build/Build/Products/Release-iphoneos/TivanONTBootstrapper.app"
+          test -d "$APP_PATH"
+          rm -rf Payload TivanONTBootstrapper-unsigned.ipa
+          mkdir Payload
+          cp -R "$APP_PATH" Payload/
+          /usr/bin/zip -qry TivanONTBootstrapper-unsigned.ipa Payload
+
+      - name: Upload IPA
+        uses: actions/upload-artifact@v4
+        with:
+          name: TivanONTBootstrapper-unsigned-ipa
+          path: TivanONTBootstrapper-unsigned.ipa
+          if-no-files-found: error
